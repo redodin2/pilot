@@ -1,0 +1,11 @@
+﻿@page "/map"
+@using MainApp.Shared
+
+
+<h1>Map</h1>
+
+<NodeView Node="@root" Callback="@(() => {})" />
+
+@code {
+    private Node root = Node.Root("Map");
+}

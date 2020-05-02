@@ -1,0 +1,10 @@
+﻿.node-input-wrapper {
+    border-left: solid;
+}
+.node-input {
+    padding-left: 1rem;
+    border-width: 0 0 0.1rem 0;
+    border-bottom-color: black;
+    background: transparent;
+    text-align: center;
+}

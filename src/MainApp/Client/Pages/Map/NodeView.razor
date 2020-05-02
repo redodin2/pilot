@@ -1,0 +1,43 @@
+﻿@using MainApp.Shared
+@using MainApp.Shared.FP
+
+<div class="d-flex align-items-center">
+    <div class="@(Node.IsFirst ? "" : "node-input-wrapper")">
+        <input id="@Node.Id"
+               size="@($"{Math.Max(1, Node.Title.Length * 0.66)}rem")"
+               placeholder="@Node.Title"
+               class="node-input"
+               @onkeydown="@OnKeyDown"
+               @bind="EditedTitle" @bind:event="oninput" />
+    </div>
+    <div class="d-flex flex-column-reverse">
+        @foreach (var child in Node.SubNodes.Reverse())
+        {
+            <NodeView Node="@child" Callback="@Callback" />
+        }
+    </div>
+</div>
+
+@code {
+    private string? EditedTitle { get; set; }
+    [Parameter] public Node Node { get; set; } = Node.Root("");
+    [Parameter] public EventCallback<Node> Callback { get; set; }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        var newNode = args.Code switch
+        {
+            "Tab" when !(args.Repeat || args.CtrlKey || args.ShiftKey || args.AltKey || args.MetaKey) => Node.AddSubNode(),
+            "Enter" => Node.AddNextNeighbour(),
+            _ => default
+        };
+
+        newNode.IfSome(_ =>
+        {
+            EditedTitle.IfSome(Node.Rename);
+            EditedTitle = default;
+        });
+
+        await Callback.InvokeAsync(Node);
+    }
+}
