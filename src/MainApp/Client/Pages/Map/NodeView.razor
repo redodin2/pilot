@@ -1,5 +1,6 @@
 ﻿@using MainApp.Shared
 @using MainApp.Shared.FP
+@inject IJSRuntime JSRuntime
 
 <div class="d-flex align-items-center">
     <div class="@(Node.IsFirst ? "" : "node-input-wrapper")">
@@ -7,37 +8,50 @@
                size="@($"{Math.Max(1, Node.Title.Length * 0.66)}rem")"
                placeholder="@Node.Title"
                class="node-input"
-               @onkeydown="@OnKeyDown"
-               @bind="EditedTitle" @bind:event="oninput" />
+               @ref="nodeRef"
+               @onkeydown="@OnKeyDown" @onkeydown:preventDefault="@shouldPrevent"
+               @bind="editedTitle" @bind:event="oninput" />
     </div>
     <div class="d-flex flex-column-reverse">
         @foreach (var child in Node.SubNodes.Reverse())
         {
-            <NodeView Node="@child" Callback="@Callback" />
+            <NodeView @key="@child.Id" Node="@child" Callback="@Callback" />
         }
     </div>
 </div>
 
 @code {
-    private string? EditedTitle { get; set; }
+    private bool shouldPrevent = false;
+    private string? editedTitle;
+    private ElementReference nodeRef;
+
     [Parameter] public Node Node { get; set; } = Node.Root("");
     [Parameter] public EventCallback<Node> Callback { get; set; }
 
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender) await nodeRef.FocusAsync(JSRuntime);
+    }
+
     private async Task OnKeyDown(KeyboardEventArgs args)
     {
-        var newNode = args.Code switch
+        Node? newNode;
+        (newNode, shouldPrevent) = args.Code switch
         {
-            "Tab" when !(args.Repeat || args.CtrlKey || args.ShiftKey || args.AltKey || args.MetaKey) => Node.AddSubNode(),
-            "Enter" => Node.AddNextNeighbour(),
-            _ => default
+            "Tab" when !IsModified(args) => (Node.AddSubNode(), true),
+            "Enter" => (Node.AddNextNeighbour(), false),
+            _ => (default, false)
         };
 
         newNode.IfSome(_ =>
         {
-            EditedTitle.IfSome(Node.Rename);
-            EditedTitle = default;
+            editedTitle.IfSome(Node.Rename);
+            editedTitle = default;
         });
 
         await Callback.InvokeAsync(Node);
     }
+
+    private bool IsModified(KeyboardEventArgs args) => args.Repeat || args.CtrlKey || args.ShiftKey || args.AltKey || args.MetaKey;
 }
